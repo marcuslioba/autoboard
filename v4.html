@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Performance - Trevo Açaí</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+    /* --- Paleta de Cores Trevo Açaí --- */
+    :root {
+    --color-primary-dark: #4A235A; /* Roxo Escuro */
+    --color-primary-light: #764BA2; /* Roxo Açaí */
+    --color-success-green: #1E8449; /* Verde Natureza/Trevo */
+    --color-alert-yellow: #FFCC00; /* Amarelo Vibrante */
+    --color-negative-red: #E74C3C; /* Vermelho Padrão (Manter para Alerta de Falha) */
+    }
+
+    * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    /* Scroll-behavior smooth para a navegação por setas */
+    scroll-behavior: smooth; 
+    }
+
+    body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    /* Fundo com gradiente Roxo Açaí */
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-dark) 100%);
+    padding: 20px;
+    min-height: 100vh;
+    }
+
+    .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    }
+
+    /* --- Seção de Upload/Gerador (Com Transição Suave) --- */
+    .upload-section {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    /* Transição para efeito slide/fade */
+    transition: all 0.4s ease-in-out; 
+    max-height: 800px; 
+    opacity: 1;
+    overflow: visible;
+    visibility: visible;
+    }
+
+    .upload-section.hidden {
+    max-height: 0; /* Colapsa o conteúdo */
+    opacity: 0; /* Fade out */
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden; /* Garante que o conteúdo oculto não apareça */
+    visibility: hidden;
+    }
+
+    .upload-area {
+    border: 3px dashed var(--color-primary-light);
+    border-radius: 10px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    }
+
+    .upload-area:hover {
+    background: #f8f9ff;
+    border-color: var(--color-primary-dark);
+    }
+
+    .upload-area input {
+    display: none;
+    }
+
+    /* Botão Padrão */
+    .btn {
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-dark) 100%);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    margin: 10px 5px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(118, 75, 162, 0.4);
+    }
+
+    .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    }
+
+    /* --- BOTÕES FIXOS E ACIMA DO RELATÓRIO (MODIFICADO) --- */
+    .fixed-controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1001;
+    display: flex;
+    gap: 10px;
+    }
+
+    .control-btn {
+    background: var(--color-alert-yellow); /* Amarelo vibrante para destaque */
+    color: var(--color-primary-dark);
+    border: none;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease-in-out; 
+    display: none; /* Inicia oculto e é mostrado ao carregar o relatório */
+    font-size: 16px; 
+    line-height: 1;
+    }
+
+    .control-btn:hover {
+    background: #ffe366; 
+    transform: scale(1.05); 
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .info-box {
+    background: #f0f9ff;
+    border-left: 4px solid var(--color-primary-light);
+    padding: 15px;
+    margin-top: 20px;
+    border-radius: 5px;
+    }
+
+    .info-box h3 {
+    color: var(--color-primary-light);
+    margin-bottom: 10px;
+    }
+
+    .info-box code {
+    background: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: monospace;
+    color: var(--color-primary-dark);
+    }
+
+    #report {
+    background: white;
+    border-radius: 15px;
+    padding: 40px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    display: none;
+    }
+
+    .report-header {
+    text-align: center;
+    margin-bottom: 40px;
+    border-bottom: 3px solid var(--color-primary-light);
+    padding-bottom: 20px;
+    scroll-margin-top: 20px; /* Para navegação por setas */
+    }
+
+    .report-header h1 {
+    color: #333;
+    font-size: 32px;
+    margin-bottom: 10px;
+    }
+
+    .report-date {
+    color: #666;
+    font-size: 18px;
+    }
+
+    .section {
+    margin-bottom: 40px;
+    scroll-margin-top: 80px; /* Para navegação por setas */
+    }
+
+    .section-title {
+    font-size: 24px;
+    color: var(--color-primary-dark);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    }
+
+    .subsection-title {
+    font-size: 18px;
+    color: var(--color-success-green);
+    margin: 20px 0 15px 0;
+    font-weight: 600;
+    display: flex; /* Para os ícones de filtro */
+    align-items: center;
+    gap: 10px;
+    }
+    
+    /* --- ÍCONES DE FILTRO (NOVO) --- */
+    .sort-icon {
+    cursor: pointer;
+    font-size: 20px;
+    padding: 5px;
+    border-radius: 5px;
+    transition: all 0.2s;
+    color: var(--color-primary-dark);
+    background: transparent;
+    }
+
+    .sort-icon:hover {
+    background: #f0f0f0;
+    }
+
+    .sort-icon.active {
+    background: var(--color-primary-light);
+    color: white;
+    }
+
+    /* --- METRIC CARDS INTERATIVOS --- */
+    .metric-card {
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-dark) 100%);
+    color: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease-in-out; 
+    display: flex; /* Para alinhar o conteúdo interno */
+    flex-direction: column;
+    justify-content: space-between;
+    }
+    
+    .metric-card:hover {
+    transform: translateY(-3px) scale(1.01); 
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3); 
+    cursor: default;
+    }
+
+    .bar-fill {
+    height: 100%;
+    border-radius: 15px;
+    transition: width 1s ease;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    }
+
+    .green { background: linear-gradient(90deg, var(--color-success-green), #0a5f32); } 
+    .red { background: linear-gradient(90deg, var(--color-negative-red), #b91c1c); }
+    .yellow-vibrant { background: linear-gradient(90deg, var(--color-alert-yellow), #f59e0b); color: #333;}
+    .purple-dark { background: linear-gradient(90deg, var(--color-primary-light), var(--color-primary-dark)); }
+    
+    /* NOVO: Estilo da barra Cinza/Inativa para as metas não atingidas/deficit */
+    .gray { 
+        background: #cccccc; /* Um cinza sólido para "desativar" */
+        color: #333; /* Texto escuro para contraste */
+    }
+
+    /* NOVO: Estilo da barra Super Restaurante */
+    .bar-super {
+    background: linear-gradient(90deg, var(--color-alert-yellow), #f59e0b) !important;
+    color: var(--color-primary-dark) !important; 
+    animation: pulse 1.5s infinite;
+    justify-content: space-between; /* Alinha o % e o texto SUPER */
+    padding: 0 10px;
+    }
+    
+    .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+    }
+
+    .chart-container { margin: 20px 0; }
+    
+    /* --- CHART BAR ITEMS INTERATIVOS --- */
+    .bar-item { 
+    margin: 12px 0; 
+    display: flex; 
+    align-items: center; 
+    gap: 15px; 
+    padding: 8px 10px; 
+    border-radius: 8px; 
+    transition: all 0.3s ease-in-out; 
+    }
+
+    .bar-item:hover {
+    background-color: #f7f7f7; 
+    transform: scale(1.01); 
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); 
+    }
+    
+    /* Ajustado min-width para o novo layout de 3 colunas (Loja | Nota | Barra) */
+    .bar-label { 
+    min-width: 200px; 
+    font-weight: 500; 
+    color: #333; 
+    display: flex; 
+    align-items: center; 
+    flex-shrink: 0; /* IMPEDE O ENCOLHIMENTO */
+    justify-content: flex-start; /* Alinha o texto e o ícone à esquerda */
+    } 
+    
+    /* NOVO: Estilo para a Nota de Avaliação na barra de Performance */
+    .bar-note-value { 
+    min-width: 60px; 
+    text-align: center; 
+    font-weight: bold; 
+    color: var(--color-primary-dark); /* Texto Roxo Escuro */
+    flex-shrink: 0; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    }
+    
+    .bar-wrapper { flex: 1; position: relative; height: 30px; background: #f0f0f0; border-radius: 15px; overflow: hidden; }
+    .bar-value { min-width: 70px; text-align: right; font-weight: bold; color: #333; }
+    .metric-label { font-size: 14px; opacity: 0.9; margin-bottom: 8px; display: flex; align-items: center; }
+    .metric-value { font-size: 32px; font-weight: bold; margin-bottom: 5px; }
+    .metric-change { font-size: 14px; opacity: 0.9; }
+    .star { color: var(--color-alert-yellow); font-size: 18px; }
+    .loading { text-align: center; padding: 20px; color: var(--color-primary-light); font-size: 18px; }
+    .error { background: #fee; border-left: 4px solid #e00; padding: 15px; margin: 20px 0; border-radius: 5px; color: #c00; }
+    
+    /* Ajuste do wrapper para o novo posicionamento (dentro do bar-label) */
+    .action-icon-wrapper {
+    position: relative;
+    display: inline-block;
+    margin-left: 5px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px;
+    flex-shrink: 0; 
+    }
+
+    .action-icon {
+    color: var(--color-alert-yellow); 
+    font-size: 18px;
+    vertical-align: middle;
+    }
+
+    .action-tooltip {
+    visibility: hidden;
+    background-color: var(--color-primary-dark);
+    color: #fff;
+    text-align: left;
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    z-index: 1000;
+    bottom: 125%; 
+    left: 50%;
+    margin-left: -100px; 
+    width: 200px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 12px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+    white-space: normal;
+    }
+
+    .action-icon-wrapper:hover .action-tooltip {
+    visibility: visible;
+    opacity: 1;
+    }
+
+    /* Animação de pulsação para Super Restaurantes */
+    @keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 204, 0, 0.7); }
+    70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(255, 204, 0, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 204, 0, 0); }
+    }
+
+    /* --- CSS para Impressão (PDF Correction) --- */
+    @media print {
+    body { background: white; padding: 0; margin: 0; }
+    .upload-section, .btn, .fixed-controls { display: none !important; }
+    #report { box-shadow: none; padding: 10mm; }
+    .section, .metric-grid, .bar-item { page-break-inside: avoid; }
+    .action-tooltip, .sort-icon { display: none !important; } 
+    }
+    
+    /* Estilos para o modo Fullscreen */
+    :fullscreen #report, 
+    :-webkit-full-screen #report, 
+    :-moz-full-screen #report, 
+    :-ms-fullscreen #report {
+    background: white;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 40px;
+    box-sizing: border-box;
+    overflow: auto;
+    }
+    </style>
+</head>
+<body>
+    <div class="fixed-controls">
+    <button class="control-btn" onclick="toggleFullScreen()" id="fullScreenBtn">
+    <span id="fullScreenIcon">🖥️</span>
+    </button>
+    <button class="control-btn" id="toggleOptionsBtn" onclick="toggleReportOptions()" title="Mostrar opções de relatório">⚙️</button>
+    </div>
+
+    <div class="container">
+    <div class="upload-section" id="uploadSection">
+    <h2 style="margin-bottom: 20px; color: var(--color-primary-dark);">📊 Gerador de Relatório de Performance</h2>
+    
+    <div class="upload-area" onclick="document.getElementById('csvFile').click()">
+    <input type="file" id="csvFile" accept=".csv" onchange="handleFile(event)">
+    <div style="font-size: 48px; margin-bottom: 10px; color: var(--color-primary-light);">📄</div>
+    <p style="font-size: 18px; color: #666;">Clique para selecionar o arquivo CSV</p>
+    <p style="font-size: 14px; color: #999; margin-top: 10px;">ou arraste o arquivo aqui</p>
+    </div>
+
+    <div class="info-box">
+    <h3>📋 Formato do CSV (Novo Modelo)</h3>
+    <p style="margin-bottom: 10px;">O arquivo deve conter as seguintes colunas (Plano de Ação é opcional):</p>
+    <p style="font-size: 14px; color: #666;">
+    <code>nome</code>, <code>alcanceMeta</code>, <code>planoAcaoMeta</code>, 
+    <code>notaChecklist</code>, <code>planoAcaoChecklist</code>, <code>crescimentoIfood</code>, 
+    <code>planoAcaoIfood</code>, <code>notaAuditoriaAnterior</code>, <code>notaAuditoriaAtual</code>, 
+    <code>planoAcaoAuditoria</code>, <code>seloSuper</code>, <code>notaAvaliacao</code>, 
+    <code>planoAcaoAvaliacao</code>
+    </p>
+    <p style="font-size: 12px; color: #999; margin-top: 10px;">
+    * Use vírgula (,) como separador de campos e ponto (.) para decimais.<br>
+    * Textos longos, como Planos de Ação, devem estar entre aspas duplas (<code>"texto"</code>).
+    </p>
+    </div>
+    
+    <div style="margin-top: 20px; text-align: center;">
+    <button class="btn" onclick="downloadCSVTemplate()">💾 Baixar Modelo de CSV</button>
+    <button class="btn" onclick="exportPDF()" id="exportBtn" disabled>📥 Exportar PDF</button>
+    </div>
+    </div>
+
+    <div id="loading" class="loading" style="display: none;">
+    ⏳ Processando dados...
+    </div>
+
+    <div id="error" class="error" style="display: none;"></div>
+
+    <div id="report"></div>
+    </div>
+
+    <script>
+    let reportData = null;
+    let currentSort = 'ifood_growth'; // Estado inicial de ordenação
+
+    // Array para armazenar referências às seções para navegação por seta
+    let sectionHeadings = []; 
+
+    // Adiciona listener de teclado para navegação de seção
+    document.addEventListener('keydown', handleKeyPressNavigation);
+
+
+    // Função para navegação de seção (REQUISITO: Avançar apresentação)
+    function handleKeyPressNavigation(event) {
+    if (!document.fullscreenElement) {
+    // Navegação só funciona no modo tela cheia para evitar interferência
+    return;
+    }
+
+    const sections = document.querySelectorAll('.section, .report-header');
+    if (sections.length === 0) return;
+
+    let currentIndex = -1;
+    const scrollThreshold = 100; // Tolerância de 100px para considerar uma seção como "visível"
+    const currentScroll = window.scrollY;
+
+    // Encontrar a seção mais próxima do topo da viewport (ou que já está na tela)
+    for (let i = 0; i < sections.length; i++) {
+    const rect = sections[i].getBoundingClientRect();
+    // Verifica se a seção está visível ou logo acima/abaixo da viewport
+    if (rect.top <= scrollThreshold && rect.bottom >= scrollThreshold) {
+    currentIndex = i;
+    break;
+    } else if (rect.top > scrollThreshold && currentIndex === -1) {
+    // Se ainda não encontrou nenhuma e esta é a primeira seção abaixo do topo
+    currentIndex = i; 
+    break;
+    }
+    }
+
+    let targetIndex = -1;
+
+    if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+    event.preventDefault();
+    targetIndex = currentIndex + 1;
+    } else if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+    event.preventDefault();
+    targetIndex = currentIndex - 1;
+    }
+
+    if (targetIndex >= 0 && targetIndex < sections.length) {
+    sections[targetIndex].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (targetIndex >= sections.length) {
+    // Rolar para o final do relatório
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    } else if (targetIndex < 0) {
+    // Rolar para o topo (cabeçalho)
+    document.querySelector('.report-header').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    }
+
+    // Função para mostrar/ocultar a seção de upload e alternar o texto do botão
+    function toggleReportOptions(show) {
+    const section = document.getElementById('uploadSection');
+    const button = document.getElementById('toggleOptionsBtn');
+    
+    // Determina o novo estado, se 'show' não for passado
+    const isCurrentlyHidden = section.classList.contains('hidden');
+    const newStateShouldBeVisible = show !== undefined ? show : isCurrentlyHidden;
+
+    if (newStateShouldBeVisible) {
+    // Mostrar a seção
+    section.classList.remove('hidden');
+    button.title = 'Ocultar opções de relatório';
+    } else {
+    // Ocultar a seção
+    section.classList.add('hidden');
+    button.title = 'Mostrar opções de relatório';
+    }
+    }
+    
+    // Função para alternar o modo tela cheia (REQUISITO)
+    function toggleFullScreen() {
+    const report = document.getElementById('report');
+
+    if (!document.fullscreenElement) {
+    if (report.requestFullscreen) {
+    report.requestFullscreen();
+    } else if (report.mozRequestFullScreen) { /* Firefox */
+    report.mozRequestFullScreen();
+    } else if (report.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
+    report.webkitRequestFullscreen();
+    } else if (report.msRequestFullscreen) { /* IE/Edge */
+    report.msRequestFullscreen();
+    }
+    } else {
+    if (document.exitFullscreen) {
+    document.exitFullscreen();
+    } else if (document.mozCancelFullScreen) { /* Firefox */
+    document.mozCancelFullScreen();
+    } else if (document.webkitExitFullscreen) { /* Chrome, Safari and Opera */
+    document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) { /* IE/Edge */
+    document.msExitFullscreen();
+    }
+    }
+    }
+
+    // Listener para atualizar o texto do botão FullScreen (REQUISITO)
+    document.addEventListener('fullscreenchange', updateFullScreenButton);
+    document.addEventListener('webkitfullscreenchange', updateFullScreenButton);
+    document.addEventListener('mozfullscreenchange', updateFullScreenButton);
+    document.addEventListener('msfullscreenchange', updateFullScreenButton);
+
+    function updateFullScreenButton() {
+    const button = document.getElementById('fullScreenBtn');
+    const iconSpan = document.getElementById('fullScreenIcon');
+
+    if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
+    // Modo Tela Cheia
+    iconSpan.textContent = '✖️';
+    button.setAttribute('title', 'Sair do modo tela cheia');
+    } else {
+    // Modo Normal
+    iconSpan.textContent = '🖥️';
+    button.setAttribute('title', 'Apresentar em Tela Cheia');
+    }
+    }
+
+    // Função principal de ordenação da seção de Performance (REQUISITO)
+    function sortDelivery(criteria) {
+    currentSort = criteria;
+    generateReport(reportData); // Re-renderiza o relatório com a nova ordenação
+    }
+
+
+    function handleFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('error').style.display = 'none';
+    document.getElementById('report').style.display = 'none';
+    document.getElementById('exportBtn').disabled = true;
+
+    // Mostrar os botões fixos (Tela Cheia e Toggle Options)
+    document.querySelectorAll('.control-btn').forEach(btn => btn.style.display = 'block');
+    
+    // Garantir que a seção de upload está visível durante o upload
+    document.getElementById('uploadSection').classList.remove('hidden');
+    toggleReportOptions(true); // Garante que o texto seja 'Ocultar'
+
+    Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    dynamicTyping: false,
+    delimiter: ',',
+    complete: function(results) {
+    try {
+    processData(results.data);
+    document.getElementById('loading').style.display = 'none';
+    } catch (error) {
+    showError('Erro ao processar dados: ' + error.message);
+    document.getElementById('loading').style.display = 'none';
+    }
+    },
+    error: function(error) {
+    showError('Erro ao ler CSV: ' + error.message);
+    document.getElementById('loading').style.display = 'none';
+    }
+    });
+    }
+
+    function showError(message) {
+    const errorDiv = document.getElementById('error');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    }
+
+    function parseNumber(value) {
+    if (value === undefined || value === null || value === '') return 0;
+    const str = String(value).trim().replace(',', '.');
+    const num = parseFloat(str);
+    return isNaN(num) ? 0 : num;
+    }
+
+    function parseBoolean(value) {
+    if (value === undefined || value === null || value === '') return false;
+    const str = String(value).toLowerCase().trim();
+    return str === 'true' || str === '1' || str === 'sim' || str === 'yes';
+    }
+
+    function cleanKey(key) {
+    if (!key) return '';
+    return key.trim().toLowerCase()
+    .replace(/\s+/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function processData(data) {
+    
+    // Limpar e validar dados
+    const cleanData = data.map((row, index) => {
+    const cleanRow = {};
+    Object.keys(row).forEach(key => {
+    if (key) {
+    cleanRow[cleanKey(key)] = row[key];
+    }
+    });
+    
+    return {
+    loja: (cleanRow.nome || cleanRow.loja || '').trim(),
+    
+    // Métricas
+    alcance_meta: parseNumber(cleanRow.alcancemeta || cleanRow.alcance_da_meta || cleanRow.alcance_meta || cleanRow.meta),
+    checklist_operacional: parseNumber(cleanRow.notachecklist || cleanRow.cumprimento_de_checklist || cleanRow.checklist_operacional || cleanRow.checklist),
+    crescimento_ifood: parseNumber(cleanRow.crescimentoifood || cleanRow.crescimento_ifood || cleanRow.ifood),
+    nota_auditoria_anterior: parseNumber(cleanRow.notaauditoriaanterior || cleanRow.nota_auditoria_anterior),
+    nota_auditoria_atual: parseNumber(cleanRow.notaauditoriaatual || cleanRow.nota_auditoria_atual),
+    selo_super: parseBoolean(cleanRow.selosuper || cleanRow.selo_super || cleanRow.selo),
+    nota_avaliacao: parseNumber(cleanRow.notaavaliacao || cleanRow.nota_avaliacao || cleanRow.nota),
+    faturamento: parseNumber(cleanRow.faturamento || cleanRow.vendas || cleanRow.receita),
+
+    // Planos de Ação 
+    plano_acao_meta: cleanRow.planoacaometa ? String(cleanRow.planoacaometa).trim() : '',
+    plano_acao_checklist: cleanRow.planoacaochecklist ? String(cleanRow.planoacaochecklist).trim() : '',
+    plano_acao_ifood: cleanRow.planoacaoifood ? String(cleanRow.planoacaoifood).trim() : '',
+    plano_acao_auditoria: cleanRow.planoacaoauditoria ? String(cleanRow.planoacaoauditoria).trim() : '',
+    plano_acao_avaliacao: cleanRow.planoacaoavaliacao ? String(cleanRow.planoacaoavaliacao).trim() : '',
+    };
+    }).filter(row => row.loja && row.loja.length > 0);
+
+    // Calcular crescimento de auditoria
+    cleanData.forEach(row => {
+    row.crescimento_auditoria = 0; 
+    if (row.nota_auditoria_anterior > 0 && row.nota_auditoria_atual > 0) {
+    row.crescimento_auditoria = ((row.nota_auditoria_atual - row.nota_auditoria_anterior) / row.nota_auditoria_anterior) * 100;
+    }
+    });
+
+    if (cleanData.length === 0) {
+    const colunas = data[0] ? Object.keys(data[0]).join(', ') : 'nenhuma coluna detectada';
+    throw new Error(`Nenhum dado válido encontrado no CSV. Colunas detectadas: ${colunas}. Verifique se há uma coluna com nomes das lojas.`);
+    }
+
+    reportData = cleanData;
+    generateReport(cleanData);
+    document.getElementById('exportBtn').disabled = false;
+    
+    // Ocultar a seção de upload
+    toggleReportOptions(false); 
+    }
+
+    function formatCurrency(value) {
+    if (!value || isNaN(value)) return 'R$ 0,00';
+    return 'R$ ' + parseFloat(value).toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+    });
+    }
+    
+    function formatPercent(value, decimals = 1) {
+    if (value === undefined || isNaN(value)) return '0.0%';
+    return parseFloat(value).toFixed(decimals).replace('.', ',') + '%';
+    }
+
+    function getActionIconHtml(plan, metricName) {
+    if (!plan) return '';
+    const safePlan = plan.replace(/"/g, "'"); 
+    return `
+    <span class="action-icon-wrapper">
+    <span class="action-icon" title="Plano de Ação para ${metricName}">⚠️</span>
+    <span class="action-tooltip">
+    <strong>Plano de Ação - ${metricName}:</strong><br>${safePlan}
+    </span>
+    </span>
+    `;
+    }
+
+    function calculateAggregateMetrics(data) {
+    if (data.length === 0) return {};
+    
+    const totalLojas = data.length;
+    const sumAlcanceMeta = data.reduce((sum, d) => sum + d.alcance_meta, 0);
+    const sumChecklist = data.reduce((sum, d) => sum + d.checklist_operacional, 0);
+    const sumCrescIfood = data.reduce((sum, d) => sum + d.crescimento_ifood, 0);
+    const sumNotaAvaliacao = data.reduce((sum, d) => sum + d.nota_avaliacao, 0);
+    const sumCrescAuditoria = data.reduce((sum, d) => sum + d.crescimento_auditoria, 0);
+    const superRestaurantesCount = data.filter(d => d.selo_super || d.nota_avaliacao >= 4.7).length;
+    
+    const topLoja = [...data].sort((a, b) => b.alcance_meta - a.alcance_meta)[0];
+
+    return {
+    topLoja: topLoja,
+    mediaAlcanceMeta: sumAlcanceMeta / totalLojas,
+    mediaChecklist: sumChecklist / totalLojas,
+    mediaCrescIfood: sumCrescIfood / totalLojas,
+    mediaNotaAvaliacao: sumNotaAvaliacao / totalLojas,
+    mediaCrescAuditoria: sumCrescAuditoria / totalLojas,
+    percentSuperRestaurante: (superRestaurantesCount / totalLojas) * 100,
+    lojasAcimaMetaCount: data.filter(d => d.alcance_meta >= 100).length
+    };
+    }
+
+    function getSortedDeliveryPerformance(data) {
+    let sortedData = [...data];
+    if (currentSort === 'nota_avaliacao') {
+    // Ordena por Nota de Avaliação (desc) e, em caso de empate, por Crescimento iFood (desc)
+    sortedData.sort((a, b) => {
+    if (b.nota_avaliacao !== a.nota_avaliacao) {
+    return b.nota_avaliacao - a.nota_avaliacao;
+    }
+    return b.crescimento_ifood - a.crescimento_ifood;
+    });
+    } else { // 'ifood_growth' é o default
+    // Ordena por Crescimento iFood (desc) e, em caso de empate, por Nota de Avaliação (desc)
+    sortedData.sort((a, b) => {
+    if (b.crescimento_ifood !== a.crescimento_ifood) {
+    return b.crescimento_ifood - a.crescimento_ifood;
+    }
+    return b.nota_avaliacao - a.nota_avaliacao;
+    });
+    }
+    return sortedData;
+    }
+
+    function generateReport(data) {
+    const report = document.getElementById('report');
+    const currentDate = new Date().toLocaleDateString('pt-BR', { 
+    month: 'long', 
+    year: 'numeric' 
+    });
+
+    const metrics = calculateAggregateMetrics(data);
+
+    const metaSuperada = data.filter(d => d.alcance_meta >= 100).sort((a, b) => b.alcance_meta - a.alcance_meta);
+    const metaNaoAlcancada = data.filter(d => d.alcance_meta < 100).sort((a, b) => b.alcance_meta - a.alcance_meta);
+
+    const crescimentoPositivo = data.filter(d => d.crescimento_auditoria >= 0).sort((a, b) => b.crescimento_auditoria - a.crescimento_auditoria);
+    const deficit = data.filter(d => d.crescimento_auditoria < 0).sort((a, b) => a.crescimento_auditoria - b.crescimento_auditoria);
+
+    const allDeliveryPerformance = getSortedDeliveryPerformance(data);
+
+    const superRestaurantes = data.filter(d => d.selo_super || d.nota_avaliacao >= 4.7);
+
+
+    let html = `
+    <div class="report-header">
+    <h1>📊 Relatório de Performance</h1>
+    <p class="report-date">${currentDate.charAt(0).toUpperCase() + currentDate.slice(1)}</p>
+    </div>
+
+    <div class="section">
+    <div class="section-title">✨ Resumo Executivo das Métricas (Geral)</div>
+    <div class="metric-grid">
+    
+    <div class="metric-card" style="background: linear-gradient(135deg, var(--color-alert-yellow) 0%, #f59e0b 100%); color: var(--color-primary-dark);">
+    <div class="metric-label">
+    🏆 Top Loja - Alcance de Meta 
+    ${getActionIconHtml(metrics.topLoja.plano_acao_meta, metrics.topLoja.loja + ' (Meta)')}
+    </div>
+    <div class="metric-value" style="font-size: 24px;">${metrics.topLoja.loja}</div>
+    <div class="metric-change">${formatPercent(metrics.topLoja.alcance_meta, 1)} de Alcance</div>
+    </div>
+
+    <div class="metric-card">
+    <div class="metric-label">Média % de Alcance de Meta</div>
+    <div class="metric-value">${formatPercent(metrics.mediaAlcanceMeta, 1)}</div>
+    <div class="metric-change">${metrics.lojasAcimaMetaCount} Lojas acima da meta (${formatPercent((metrics.lojasAcimaMetaCount / data.length) * 100, 0)})</div>
+    </div>
+
+    <div class="metric-card" style="background: linear-gradient(135deg, var(--color-success-green) 0%, #0a5f32 100%);">
+    <div class="metric-label">Média % Cumprimento de Checklist</div>
+    <div class="metric-value">${formatPercent(metrics.mediaChecklist, 1)}</div>
+    </div>
+
+    <div class="metric-card" style="background: linear-gradient(135deg, var(--color-alert-yellow) 0%, #f59e0b 100%); color: var(--color-primary-dark);">
+    <div class="metric-label">Média % Crescimento iFood (Delivery)</div>
+    <div class="metric-value">${formatPercent(metrics.mediaCrescIfood, 1)}</div>
+    </div>
+    
+    <div class="metric-card">
+    <div class="metric-label">Média de Crescimento de Auditoria</div>
+    <div class="metric-value">${formatPercent(metrics.mediaCrescAuditoria, 1)}</div>
+    <div class="metric-change">Média da Variação de Nota Individual</div>
+    </div>
+
+    <div class="metric-card" style="background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-dark) 100%);">
+    <div class="metric-label">% de Super Restaurantes</div>
+    <div class="metric-value">${formatPercent(metrics.percentSuperRestaurante, 0)}</div>
+    <div class="metric-change">${superRestaurantes.length} Lojas (Nota ≥ 4.7)</div>
+    </div>
+
+    <div class="metric-card" style="background: linear-gradient(135deg, var(--color-alert-yellow) 0%, #f59e0b 100%); color: var(--color-primary-dark);">
+    <div class="metric-label">Média da Nota de Avaliação (iFood)</div>
+    <div class="metric-value">${metrics.mediaNotaAvaliacao.toFixed(2).replace('.', ',')}</div>
+    <div class="metric-change">Total de ${data.length} Unidades</div>
+    </div>
+    </div>
+    </div>
+
+    <div class="section" id="meta-alcance">
+    <div class="section-title">🎯 Alcance de Meta por Unidade</div>
+    
+    ${metaSuperada.length > 0 ? `
+    <div class="subsection-title">🟢 SUPERARAM A META (>100%)</div>
+    <div class="chart-container">
+    ${metaSuperada.map(loja => `
+    <div class="bar-item">
+    <div class="bar-label">
+    ${loja.loja}
+    ${getActionIconHtml(loja.plano_acao_meta, loja.loja + ' (Meta)')}
+    </div>
+    <div class="bar-wrapper">
+    <div class="bar-fill green" style="width: ${Math.min(loja.alcance_meta, 120)}%">
+    ${loja.alcance_meta.toFixed(0)}%
+    </div>
+    </div>
+    </div>
+    `).join('')}
+    </div>
+    ` : ''}
+
+    ${metaNaoAlcancada.length > 0 ? `
+    <div class="subsection-title" style="color: var(--color-negative-red);">🔴 ABAIXO DA META (<100%)</div>
+    <div class="chart-container">
+    ${metaNaoAlcancada.map(loja => `
+    <div class="bar-item">
+    <div class="bar-label">
+    ${loja.loja}
+    ${getActionIconHtml(loja.plano_acao_meta, loja.loja + ' (Meta)')}
+    </div>
+    <div class="bar-wrapper">
+    <div class="bar-fill gray" style="width: ${loja.alcance_meta}%">
+    ${loja.alcance_meta.toFixed(0)}%
+    </div>
+    </div>
+    </div>
+    `).join('')}
+    </div>
+    ` : ''}
+    </div>
+
+    <div class="section" id="cresc-auditoria">
+    <div class="section-title">📈 Crescimento das Notas de Auditoria</div>
+    
+    ${crescimentoPositivo.length > 0 ? `
+    <div class="subsection-title">🟢 CRESCIMENTO POSITIVO</div>
+    <div class="chart-container">
+    ${crescimentoPositivo.map(loja => `
+    <div class="bar-item">
+    <div class="bar-label">
+    ${loja.loja}
+    ${getActionIconHtml(loja.plano_acao_auditoria, loja.loja + ' (Auditoria)')}
+    </div>
+    <div class="bar-wrapper">
+    <div class="bar-fill green" style="width: ${Math.min(Math.abs(loja.crescimento_auditoria) * 10, 100)}%">
+    +${loja.crescimento_auditoria.toFixed(2)}%
+    </div>
+    </div>
+    </div>
+    `).join('')}
+    </div>
+    ` : ''}
+
+    ${deficit.length > 0 ? `
+    <div class="subsection-title" style="color: var(--color-primary-light);">🔻 DÉFICIT</div>
+    <div class="chart-container">
+    ${deficit.map(loja => `
+    <div class="bar-item">
+    <div class="bar-label">
+    ${loja.loja}
+    ${getActionIconHtml(loja.plano_acao_auditoria, loja.loja + ' (Auditoria)')}
+    </div>
+    <div class="bar-wrapper">
+    <div class="bar-fill gray" style="width: ${Math.min(Math.abs(loja.crescimento_auditoria) * 10, 100)}%">
+    ${loja.crescimento_auditoria.toFixed(2)}%
+    </div>
+    </div>
+    </div>
+    `).join('')}
+    </div>
+    ` : ''}
+    </div>
+
+    <div class="section" id="checklist">
+    <div class="section-title">📝 Cumprimento de Checklist Operacional</div>
+    <div class="chart-container">
+    ${data.sort((a, b) => b.checklist_operacional - a.checklist_operacional).map(loja => {
+    const colorClass = loja.checklist_operacional >= 90 ? 'green' : loja.checklist_operacional >= 75 ? 'yellow-vibrant' : 'red';
+    return `
+    <div class="bar-item">
+    <div class="bar-label">
+    ${loja.loja}
+    ${getActionIconHtml(loja.plano_acao_checklist, loja.loja + ' (Checklist)')}
+    </div>
+    <div class="bar-wrapper">
+    <div class="bar-fill ${colorClass}" 
+    style="width: ${loja.checklist_operacional}%">
+    ${loja.checklist_operacional.toFixed(0)}%
+    </div>
+    </div>
+    </div>
+    `;
+    }).join('')}
+    </div>
+    </div>
+
+    <div class="section" id="delivery-performance">
+    <div class="section-title">🚚 Performance Delivery iFood e Avaliação de Lojas</div>
+    
+    <div class="subsection-title" style="color: var(--color-alert-yellow);">
+    RANKING POR 
+    
+    <span class="sort-icon ${currentSort === 'nota_avaliacao' ? 'active' : ''}" 
+    title="Ordenar por Melhor Nota de Avaliação"
+    onclick="sortDelivery('nota_avaliacao')">⭐</span>
+    
+    <span class="sort-icon ${currentSort === 'ifood_growth' ? 'active' : ''}" 
+    title="Ordenar por Melhor Crescimento iFood"
+    onclick="sortDelivery('ifood_growth')">📈</span>
+    </div>
+    <div class="chart-container">
+    ${allDeliveryPerformance.map(loja => {
+    const isSuper = loja.selo_super || loja.nota_avaliacao >= 4.7;
+    const crescPercent = loja.crescimento_ifood;
+    
+    let barClass;
+
+    if (crescPercent < 0) {
+        // Crescimento negativo: prioriza o cinza e desativa o pulsar
+        barClass = 'gray'; 
+    } else if (isSuper) {
+        // Crescimento positivo E é Super Restaurante: usa o amarelo vibrante com pulsar.
+        barClass = 'yellow-vibrant bar-super'; 
+    } else {
+        // Crescimento positivo E não é Super: usa o amarelo vibrante.
+        barClass = 'yellow-vibrant';
+    }
+    
+    // Adicionar o sinal de + ou -
+    const percentDisplay = crescPercent >= 0 
+    ? '+' + crescPercent.toFixed(2).replace('.', ',') + '%'
+    : crescPercent.toFixed(2).replace('.', ',') + '%';
+    
+    return `
+    <div class="bar-item">
+    <div class="bar-label">
+    ${loja.loja}
+    ${getActionIconHtml(loja.plano_acao_ifood, loja.loja + ' (iFood)')}
+    ${getActionIconHtml(loja.plano_acao_avaliacao, loja.loja + ' (Avaliação)')}
+    </div>
+    
+    <div class="bar-note-value">
+    ${loja.nota_avaliacao.toFixed(1).replace('.', ',')} 
+    <span class="star" style="font-size: 14px;">⭐</span>
+    </div>
+
+    <div class="bar-wrapper" style="flex: 1;">
+    <div class="bar-fill ${barClass}" 
+    style="width: ${Math.min(Math.abs(crescPercent), 100)}%; 
+    justify-content: space-between; padding: 0 10px;">
+    
+    <span>${percentDisplay}</span>
+    ${isSuper ? '<span style="opacity: 0.8; font-size: 10px;">SUPER</span>' : ''} 
+    </div>
+    </div>
+    
+    </div>
+    `;
+    }).join('')}
+    </div>
+    </div>
+
+    `;
+
+    report.innerHTML = html;
+    report.style.display = 'block';
+    
+    // Animar barras (Melhoria de Animação)
+    // Usa requestAnimationFrame para garantir que o navegador desenhe o elemento antes de aplicar o width
+    requestAnimationFrame(() => {
+    document.querySelectorAll('.bar-fill').forEach(bar => {
+    // O style.width já foi definido na string HTML, a simples reatribuição garante o trigger
+    bar.style.width = bar.style.width; 
+    });
+    });
+    }
+
+    function exportPDF() {
+    const element = document.getElementById('report');
+    const opt = {
+    margin: 10, 
+    filename: `relatorio-performance-${new Date().toISOString().split('T')[0]}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { 
+    scale: 2, 
+    useCORS: true,
+    scrollY: 0,
+    scrollX: 0
+    },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['css', 'legacy'] } 
+    };
+    
+    html2pdf().set(opt).from(element).save();
+    }
+
+    function downloadCSVTemplate() {
+    const header = "nome,alcanceMeta,planoAcaoMeta,notaChecklist,planoAcaoChecklist,crescimentoIfood,planoAcaoIfood,notaAuditoriaAnterior,notaAuditoriaAtual,planoAcaoAuditoria,seloSuper,notaAvaliacao,planoAcaoAvaliacao\n";
+    const example1 = 'Loja Centro,95,"Aumentar campanhas de incentivo para superar a meta",92,"Revisar checklist diário e treinar 2 funcionários",15,"Melhorar tempo de entrega iFood",8.5,9.2,"Focar em limpeza e organização de estoque",sim,4.8,"Reforçar treinamento de equipe e atendimento"\n';
+    const example2 = 'Loja Norte,105,"Manter o foco no Cliente e expandir área de atuação",98,"Manter padrão de excelência em todos os turnos",12,"Atingir 15% de crescimento e reduzir erros de pedido",8.0,7.5,"Revisão total de processos de qualidade (deficit)",nao,4.5,"Treinar novos funcionários em atendimento no salão"';
+
+    const csvContent = "data:text/csv;charset=utf-8," + header + example1 + example2;
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "modelo-relatorio-com-plano-de-acao.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    }
+
+    // Drag and drop
+    const uploadArea = document.querySelector('.upload-area');
+    
+    uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.style.background = '#f8f9ff';
+    });
+
+    uploadArea.addEventListener('dragleave', (e) => {
+    uploadArea.style.background = '';
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.style.background = '';
+    
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.csv')) {
+    const input = document.getElementById('csvFile');
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    input.files = dataTransfer.files;
+    handleFile({ target: input });
+    } else {
+    alert('Por favor, selecione um arquivo CSV válido.');
+    }
+    });
+
+    // Inicialização do texto do botão toggle options
+    document.addEventListener('DOMContentLoaded', () => {
+    const button = document.getElementById('toggleOptionsBtn');
+    button.textContent = 'Mostrar opções de relatório';
+    });
+    </script>
+</body>
+</html>
